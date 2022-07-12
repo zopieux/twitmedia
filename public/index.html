@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>twitmedia</title>
+    <style rel="stylesheet">
+        :root {
+            --br: 3px;
+            --pad: 1rem;
+        }
+
+        body {
+            font-family: sans-serif;
+            font-weight: lighter;
+            background-color: #212121;
+            color: #c9c9c9;
+            margin: 0;
+            padding: var(--pad);
+        }
+
+        main {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--pad);
+        }
+
+        /*main::after {
+            content: "";
+            flex-grow: 10;
+        }*/
+
+        main > section {
+            height: calc(33vh - var(--pad));
+            flex-grow: 1;
+            position: relative;
+            cursor: pointer;
+        }
+
+        main > section > aside {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: calc(var(--pad) / 2);
+            font-size: 0.9rem;
+            transition: all 0.1s 0.05s ease-in-out;
+            opacity: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: stretch;
+        }
+
+        main > section:hover > aside {
+            opacity: 1;
+        }
+
+        main > section > aside > a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        main > section > aside > * {
+            padding: calc(var(--pad) / 2);
+            background-color: rgba(0, 0, 0, .75);
+            border-radius: var(--br);
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            text-overflow: fade;
+            overflow: hidden;
+        }
+
+        main > section > aside > a.author > img {
+            object-fit: cover;
+            border-radius: 3px;
+            width: 24px;
+            height: 24px;
+            margin-inline-end: calc(var(--pad) / 2);
+            vertical-align: middle;
+        }
+
+        main > section > video:not(:fullscreen), main > section > img:not(:fullscreen) {
+            object-fit: cover;
+            max-height: 100%;
+            min-width: 100%;
+            vertical-align: middle;
+            border-radius: var(--br);
+        }
+
+        main > button#more {
+            font: inherit;
+            color: inherit;
+            outline: none;
+            margin: 0;
+            padding: 0;
+            border: none;
+            height: calc(33vh - var(--pad));
+            flex-grow: 1;
+            position: relative;
+            cursor: pointer;
+            border-radius: var(--br);
+            background-color: #471c58;
+            min-width: 32ch;
+        }
+
+        main > button#more:disabled {
+            background-color: #4b464d;
+        }
+    </style>
+</head>
+<body>
+
+<main>
+    <button class="more" id="more"><em>Loading app…</em></button>
+</main>
+
+<script type="application/ecmascript">
+    (async function () {
+        const CRED_NAMES = ["token", "ct0", "bearer"];
+
+        async function* iterResponseLines(response) {
+            const utf8Decoder = new TextDecoder("utf-8");
+            let reader = response.body.getReader();
+            let {value: chunk, done: readerDone} = await reader.read();
+            chunk = chunk ? utf8Decoder.decode(chunk, {stream: true}) : "";
+            let re = /\r\n|\n|\r/gm;
+            let startIndex = 0;
+            for (; ;) {
+                let result = re.exec(chunk);
+                if (!result) {
+                    if (readerDone) {
+                        break;
+                    }
+                    let remainder = chunk.substr(startIndex);
+                    ({value: chunk, done: readerDone} = await reader.read());
+                    chunk = remainder + (chunk ? utf8Decoder.decode(chunk, {stream: true}) : "");
+                    startIndex = re.lastIndex = 0;
+                    continue;
+                }
+                yield chunk.substring(startIndex, result.index);
+                startIndex = re.lastIndex;
+            }
+            if (startIndex < chunk.length) {
+                // last line didn't end in a newline char
+                yield chunk.substr(startIndex);
+            }
+        }
+
+        const $gallery = document.querySelector('main');
+        const $more = document.getElementById('more');
+
+        let credHeaders = null;
+        let $currentMedia = null;
+        let db = null;
+
+        $more.addEventListener('click', async function (e) {
+            e.stopPropagation();
+            await doTheNeedfull();
+        });
+
+        const p = new URLSearchParams(window.location.search);
+        const dateFrom = p.get('from'), dateTo = p.get('to');
+        let cursor = p.get('cursor');
+
+        function mediaOf(u) {
+            return `/media/${u}`
+        }
+
+        function urlOf(e) {
+            return mediaOf(e.url);
+        }
+
+        function humanCount(c) {
+            if (c >= 1_000_000) return `${(c / 1_000_000).toFixed(1)}M`;
+            if (c >= 1_000) return `${(c / 1_000).toFixed(1)}k`;
+            return `${c}`;
+        }
+
+        function createMedia(e) {
+            let $inner;
+            switch (e.type) {
+                case 'video':
+                    $inner = document.createElement('video');
+                    $inner.src = urlOf(e);
+                    $inner.muted = true;
+                    $inner.autoplay = false;
+                    $inner.loop = true;
+                    $inner.controls = true;
+                    $inner.addEventListener('mouseover', function (e) {
+                        document.querySelectorAll('video').forEach($e => $e !== this && $e.pause());
+                        this.muted = false;
+                        this.play();
+                    });
+                    $inner.addEventListener('mouseout', function (e) {
+                        // this.muted = true;
+                        // this.pause();
+                    });
+                    break;
+                case 'photo':
+                    $inner = document.createElement('img');
+                    $inner.src = urlOf(e);
+                    $inner.addEventListener('dblclick', function (e) {
+                        e.preventDefault();
+                        window.open(this.src, '_blank');
+                    });
+                    break;
+                default:
+                    return;
+            }
+            const $pic = document.createElement('img');
+            $pic.src = mediaOf(e.author.picture_url);
+            const $author = document.createElement('a');
+            $author.className = 'author';
+            $author.href = e.author.url;
+            $author.target = '_blank';
+            $author.rel = 'nofollow noopener noreferrer';
+            $author.appendChild($pic);
+            $author.appendChild(document.createTextNode(e.author.screen_name));
+            const $stat = document.createElement('a');
+            $stat.className = 'stat';
+            $stat.href = e.media_url;
+            $stat.target = '_blank';
+            $stat.rel = 'nofollow noopener noreferrer';
+            $stat.textContent = `${humanCount(e.likes)} ❤ ⋅ ${humanCount(e.retweets)} ⤰`;
+            $stat.title = `${e.likes} ❤ ⋅ ${e.retweets} ⤰`;
+            const $info = document.createElement('aside');
+            $info.appendChild($author);
+            $info.appendChild($stat);
+            const $media = document.createElement('section');
+            $media.appendChild($inner);
+            $media.appendChild($info);
+            $media.dataset.key = e.key;
+            $media.addEventListener('mouseover', function (e) {
+                $currentMedia = this;
+            });
+            $media.addEventListener('mouseout', _ => $currentMedia = null);
+            $gallery.insertBefore($media, $more);
+        }
+
+        async function doTheNeedfull() {
+            if ($more.disabled) return;
+            const qs = new URLSearchParams();
+            if (!!cursor && cursor.length) qs.set("cursor", cursor);
+            if (!!dateFrom && dateFrom.match(/[0-9]{4}-[0-9]{2}-[0-9]{2}/)) qs.set("from", dateFrom);
+            if (!!dateTo && dateTo.match(/[0-9]{4}-[0-9]{2}-[0-9]{2}/)) qs.set("to", dateTo);
+            $more.textContent = "Loading…";
+            $more.disabled = true;
+            const raw = await fetch('/tl?' + qs.toString(), {headers: credHeaders});
+            for await (let line of iterResponseLines(raw)) {
+                if (line.trim() === "ERR") {
+                    console.error("error loading content");
+                    break;
+                }
+                const data = JSON.parse(line);
+                if (data.total != null) {
+                    $more.textContent = `Loading ${data.done}/${data.total}…`;
+                    continue;
+                }
+                cursor = data.cursor;
+                {
+                    const qs = new URLSearchParams(window.location.search);
+                    qs.set("cursor", cursor);
+                    window.history.replaceState(Object.fromEntries(qs.entries()), '', '/?' + qs.toString());
+                }
+                const ignores = await getIgnores();
+                await data.entities
+                    .filter(e => !ignores.has(e.key))
+                    .forEach(e => createMedia(e));
+                $more.textContent = "Load more";
+                $more.disabled = data.eof === true;
+                if (data.eof === true) {
+                    $more.style.display = "none";
+                }
+            }
+        }
+
+        async function ignoreMedia($el) {
+            if (!$el || !db) return;
+            const key = $el.dataset.key;
+            await new Promise((resolve, error) => {
+                const req = db.transaction(['ignore'], 'readwrite')
+                    .objectStore('ignore').put({key});
+                req.onsuccess = e => resolve();
+                req.onerror = e => error(e);
+            });
+            console.log("ignored", key);
+            $el.parentElement.removeChild($el);
+        }
+
+        async function getIgnores() {
+            if (!db) return new Set();
+            return await new Promise((resolve, error) => {
+                const req = db.transaction(['ignore'], 'readonly')
+                    .objectStore('ignore').index('keys').getAllKeys();
+                req.onsuccess = e => resolve(new Set(e.target.result));
+                req.onerror = e => error(e);
+            });
+        }
+
+        document.addEventListener('keydown', async function (e) {
+            if (e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                await doTheNeedfull();
+            } else if (e.key === 'Backspace' || e.key === 'Delete') {
+                e.preventDefault();
+                e.stopPropagation();
+                await ignoreMedia($currentMedia);
+            }
+        });
+
+        credHeaders = new Headers(CRED_NAMES.map(c => {
+            const key = `cred-${c}`;
+            let value = window.localStorage.getItem(key);
+            while (!value || !value.length) {
+                value = prompt(`Please paste the '${c}' cookie/header:`);
+                if (value && value.length) {
+                    window.localStorage.setItem(key, value);
+                }
+            }
+            return [`x-twit-cred-${c}`, value];
+        }));
+
+        db = await (new Promise((resolve, error) => {
+            const req = window.indexedDB.open('twitmedia', 1);
+            req.onsuccess = e => resolve(e.target.result);
+            req.onerror = e => error(e);
+            req.onupgradeneeded = e => {
+                db = e.target.result;
+                const store = db.createObjectStore('ignore', {keyPath: 'key'});
+                store.createIndex('keys', 'key', {unique: true});
+                store.transaction.oncomplete = e => console.log('created object store');
+            }
+        }));
+
+        await doTheNeedfull();
+    })();
+</script>
+
+</body>
+</html>
