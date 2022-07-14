@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>twitmedia</title>
     <style rel="stylesheet">
         :root {
@@ -24,16 +25,12 @@
             gap: var(--pad);
         }
 
-        /*main::after {
-            content: "";
-            flex-grow: 10;
-        }*/
-
         main > section {
             height: calc(33vh - var(--pad));
             flex-grow: 1;
             position: relative;
             cursor: pointer;
+            max-width: 100%;
         }
 
         main > section > aside {
@@ -83,7 +80,9 @@
             object-fit: cover;
             max-height: 100%;
             min-width: 100%;
-            vertical-align: middle;
+            max-width: 100%;
+            vertical-align: top;
+            object-position: top center;
             border-radius: var(--br);
         }
 
