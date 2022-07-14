@@ -28,6 +28,7 @@ type Api struct {
 	Client   *http.Client
 	CacheDir string
 	workQ    chan dlItem
+	mu       sync.Mutex
 }
 
 func NewApi(cacheDir string) *Api {
@@ -35,6 +36,7 @@ func NewApi(cacheDir string) *Api {
 		Client:   http.DefaultClient,
 		CacheDir: cacheDir,
 		workQ:    make(chan dlItem),
+		mu:       sync.Mutex{},
 	}
 }
 
@@ -260,11 +262,14 @@ func (a *Api) dlWorker() {
 		defer item.wg.Done()
 		tail := cacheKey(item.key)
 		fname := path.Join(a.CacheDir, tail)
+		a.mu.Lock()
 		_, err := os.Stat(fname)
 		if err == nil {
-			//log.Printf("already dled %s", item.id)
+			a.mu.Unlock()
 			return
 		}
+		_ = os.WriteFile(fname, []byte{}, 0o644)
+		a.mu.Unlock()
 		req, err := http.NewRequestWithContext(context.Background(), "GET", item.url, nil)
 		if err != nil {
 			return
