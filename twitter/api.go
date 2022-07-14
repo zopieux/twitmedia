@@ -62,7 +62,8 @@ type TwitEntity struct {
 
 type TwitResponse struct {
 	Entities []*TwitEntity `json:"entities"`
-	Cursor   string        `json:"cursor"`
+	Current  string        `json:"current"`
+	Next     string        `json:"next"`
 	Eof      bool          `json:"eof"`
 }
 
@@ -186,7 +187,9 @@ func (a *Api) GetHomeMedia(ctx context.Context, _dateFrom, _dateTo *time.Time, c
 			break
 		case "TimelineTimelineCursor":
 			if e.Content.CursorType == "Bottom" {
-				resp.Cursor = e.Content.Value
+				resp.Next = e.Content.Value
+			} else if e.Content.CursorType == "Top" {
+				resp.Current = e.Content.Value
 			}
 			break
 		}
@@ -211,13 +214,15 @@ func (a *Api) GetSearchMedia(ctx context.Context, dateFrom, dateTo *time.Time, c
 		if ins.AddEntries != nil {
 			for _, entry := range ins.AddEntries.Entries {
 				if entry.EntryID == "sq-cursor-bottom" {
-					resp.Cursor = entry.Content.Operation.Cursor.Value
+					resp.Next = entry.Content.Operation.Cursor.Value
 				} else if entry.Content.Item != nil {
 					entries = append(entries, entry)
 				}
 			}
 		} else if ins.ReplaceEntry != nil && ins.ReplaceEntry.EntryIDToReplace == "sq-cursor-bottom" {
-			resp.Cursor = ins.ReplaceEntry.Entry.Content.Operation.Cursor.Value
+			resp.Next = ins.ReplaceEntry.Entry.Content.Operation.Cursor.Value
+		} else if ins.ReplaceEntry != nil && ins.ReplaceEntry.EntryIDToReplace == "sq-cursor-top" {
+			resp.Current = ins.ReplaceEntry.Entry.Content.Operation.Cursor.Value
 		}
 	}
 	total := len(entries)
