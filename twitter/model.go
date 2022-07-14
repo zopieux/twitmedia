@@ -274,6 +274,11 @@ type Tweet struct {
 	ConversationID            int64             `json:"conversation_id,omitempty"`
 	SupplementalLanguage      interface{}       `json:"supplemental_language,omitempty"`
 	Ext                       *TweetExt         `json:"ext,omitempty"`
+	SelfThread                *SelfThread       `json:"self_thread,omitempty"`
+	RetweetedStatus           *RetweetedStatus  `json:"retweeted_status_result,omitempty"`
+}
+type RetweetedStatus struct {
+	Result *TweetResult `json:"result,omitempty"`
 }
 type TweetResult struct {
 	Typename            string               `json:"__typename"`

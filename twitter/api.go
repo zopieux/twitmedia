@@ -175,8 +175,7 @@ func (a *Api) GetHomeMedia(ctx context.Context, _dateFrom, _dateTo *time.Time, c
 				continue
 			}
 			user := result.Core.UserResults.Result.Legacy
-			tweet := result.Legacy
-			log.Printf("Tweet %s %s", e.Content.ClientEventInfo.Details.TimelinesDetails.InjectionType, tweet.IDStr)
+			tweet := tweetOrRetweet(result.Legacy)
 			media := a.extractMedias(user, tweet, &wg)
 			resp.Entities = append(resp.Entities, media...)
 			total += len(media)
@@ -235,6 +234,7 @@ func (a *Api) GetSearchMedia(ctx context.Context, dateFrom, dateTo *time.Time, c
 		if !ok {
 			continue
 		}
+		tweet = tweetOrRetweet(tweet)
 		user, ok := userMap[tweet.UserIDStr]
 		if !ok {
 			continue
@@ -438,4 +438,11 @@ func (a *Api) getSearchTimeline(ctx context.Context, dateFrom, dateTo *time.Time
 		return nil, err
 	}
 	return &response, nil
+}
+
+func tweetOrRetweet(t *Tweet) *Tweet {
+	if t.RetweetedStatus != nil && t.RetweetedStatus.Result != nil {
+		return t.RetweetedStatus.Result.Legacy
+	}
+	return t
 }
