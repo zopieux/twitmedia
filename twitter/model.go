@@ -17,7 +17,7 @@ type HomeVariables struct {
 	WithReactionsMetadata       bool     `json:"withReactionsMetadata"`
 	WithReactionsPerspective    bool     `json:"withReactionsPerspective"`
 	WithSuperFollowsTweetFields bool     `json:"withSuperFollowsTweetFields"`
-	SeenTweetIds                []string `json:"seenTweetIds"`
+	SeenTweetIds                []string `json:"seenTweetIds,omitempty"`
 }
 type HomeFeatures struct {
 	DontMentionMeViewAPIEnabled      bool `json:"dont_mention_me_view_api_enabled"`

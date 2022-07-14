@@ -331,7 +331,6 @@ func (a *Api) getHomeTimeline(ctx context.Context, cursor string, auth TAuth) (*
 			WithReactionsMetadata:       false,
 			WithReactionsPerspective:    false,
 			WithSuperFollowsTweetFields: true,
-			SeenTweetIds:                []string{"1545882924544827392"},
 		},
 		Features: &HomeFeatures{
 			DontMentionMeViewAPIEnabled:      true,
@@ -348,8 +347,13 @@ func (a *Api) getHomeTimeline(ctx context.Context, cursor string, auth TAuth) (*
 	if err != nil {
 		return nil, err
 	}
+	values := url.Values{}
+	j, _ := json.Marshal(data.Variables)
+	values.Set("variables", string(j))
+	j, _ = json.Marshal(data.Features)
+	values.Set("features", string(j))
 	body := bytes.NewReader(payloadBytes)
-	req, err := http.NewRequestWithContext(ctx, "POST", "https://twitter.com/i/api/twitter/iEMFB7-_JPy1LG00EWbYUw/HomeLatestTimeline", body)
+	req, err := http.NewRequestWithContext(ctx, "GET", "https://twitter.com/i/api/graphql/iEMFB7-_JPy1LG00EWbYUw/HomeLatestTimeline?"+values.Encode(), body)
 	if err != nil {
 		return nil, err
 	}
