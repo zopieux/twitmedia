@@ -99,7 +99,7 @@ func main() {
 	api.Start(5)
 
 	http.Handle("/media/", http.StripPrefix("/media/", http.FileServer(http.Dir(*cacheDir))))
-	http.Handle("/tl", http.HandlerFunc(timeline))
+	http.Handle("/gallery", http.HandlerFunc(gallery))
 	html, _ := fs.Sub(fs.FS(content), "public")
 	http.Handle("/", http.FileServer(http.FS(html)))
 	http.ListenAndServe(*listen, nil)

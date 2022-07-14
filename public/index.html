@@ -245,7 +245,7 @@
             if (!!dateTo && dateTo.match(/[0-9]{4}-[0-9]{2}-[0-9]{2}/)) qs.set("to", dateTo);
             $more.textContent = "Loading…";
             $more.disabled = true;
-            const raw = await fetch('/tl?' + qs.toString(), {headers: credHeaders});
+            const raw = await fetch('/gallery?' + qs.toString(), {headers: credHeaders});
             for await (let line of iterResponseLines(raw)) {
                 if (line.trim() === "ERR") {
                     console.error("error loading content");
