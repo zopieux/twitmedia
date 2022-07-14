@@ -295,6 +295,7 @@ type ItemContent struct {
 	ItemType         string        `json:"itemType"`
 	TweetResults     *TweetResults `json:"tweet_results"`
 	TweetDisplayType string        `json:"tweetDisplayType"`
+	PromotedMetadata *interface{}  `json:"promotedMetadata,omitempty"`
 }
 type TimelinesDetails struct {
 	InjectionType  string `json:"injectionType"`
@@ -335,14 +336,14 @@ type Content struct {
 	CursorType          string           `json:"cursorType"`
 	StopOnEmptyResponse bool             `json:"stopOnEmptyResponse"`
 }
-type TlEntries struct {
+type TlEntry struct {
 	EntryID   string   `json:"entryId"`
 	SortIndex string   `json:"sortIndex"`
 	Content   *Content `json:"content,omitempty"`
 }
 type Instructions struct {
-	Type    string       `json:"type"`
-	Entries []*TlEntries `json:"entries"`
+	Type    string     `json:"type"`
+	Entries []*TlEntry `json:"entries"`
 }
 type ResponseObjects struct {
 	FeedbackActions    []interface{} `json:"feedbackActions"`

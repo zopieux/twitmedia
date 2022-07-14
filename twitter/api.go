@@ -160,16 +160,20 @@ func (a *Api) GetHomeMedia(ctx context.Context, _dateFrom, _dateTo *time.Time, c
 	resp := &TwitResponse{Entities: []*TwitEntity{}, Eof: len(entries) <= 2}
 	for _, e := range entries {
 		total -= 1
+		if isAdEntryId(e.EntryID) {
+			// Ad.
+			continue
+		}
 		switch e.Content.EntryType {
 		case "TimelineTimelineItem":
 			if e.Content.ItemContent.ItemType != "TimelineTweet" {
 				continue
 			}
-			if e.Content.ClientEventInfo == nil {
-				// Ad?
+			result := e.Content.ItemContent.TweetResults.Result
+			if e.Content.ItemContent.PromotedMetadata != nil {
+				// Ad.
 				continue
 			}
-			result := e.Content.ItemContent.TweetResults.Result
 			if result.Typename != "Tweet" {
 				// Suspended account?
 				continue
@@ -226,6 +230,10 @@ func (a *Api) GetSearchMedia(ctx context.Context, dateFrom, dateTo *time.Time, c
 	userMap := tl.GlobalObjects.Users
 	for _, e := range entries {
 		total -= 1
+		if isAdEntryId(e.EntryID) {
+			// Ad.
+			continue
+		}
 		if e.Content.Item == nil {
 			continue
 		}
@@ -449,4 +457,12 @@ func tweetOrRetweet(t *Tweet) *Tweet {
 		return t.RetweetedStatus.Result.Legacy
 	}
 	return t
+}
+
+func isAdEntryId(eid string) bool {
+	return strings.Contains(eid, "promotedTweet-")
+}
+
+func isAdTlEntry(t *TlEntry) bool {
+	return isAdEntryId(t.EntryID) || t.Content.ItemContent.PromotedMetadata != nil
 }
