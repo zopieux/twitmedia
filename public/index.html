@@ -159,7 +159,7 @@
         });
 
         const p = new URLSearchParams(window.location.search);
-        const dateFrom = p.get('from'), dateTo = p.get('to');
+        const dateFrom = p.get('from'), dateTo = p.get('to'), mode = p.get('mode');
         let cursor = p.get('cursor');
 
         function mediaOf(u) {
@@ -241,6 +241,7 @@
             if ($more.disabled) return;
             const qs = new URLSearchParams();
             if (!!cursor && cursor.length) qs.set("cursor", cursor);
+            if (!!mode && mode.length) qs.set("mode", mode);
             if (!!dateFrom && dateFrom.match(/[0-9]{4}-[0-9]{2}-[0-9]{2}/)) qs.set("from", dateFrom);
             if (!!dateTo && dateTo.match(/[0-9]{4}-[0-9]{2}-[0-9]{2}/)) qs.set("to", dateTo);
             $more.textContent = "Loading…";

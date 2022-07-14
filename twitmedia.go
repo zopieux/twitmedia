@@ -5,8 +5,8 @@ import (
 	"embed"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io/fs"
+	"log"
 	"net/http"
 	"time"
 	"twitmedia/twitter"
@@ -37,9 +37,10 @@ func getAuth(r *http.Request) twitter.TAuth {
 	}
 }
 
-func timeline(w http.ResponseWriter, request *http.Request) {
+func gallery(w http.ResponseWriter, request *http.Request) {
 	qs := request.URL.Query()
 	cursor := qs.Get("cursor")
+	mode := qs.Get("mode")
 	var dateFrom, dateTo *time.Time
 	dateFrom = &time.Time{}
 	*dateFrom = time.Now().AddDate(0, 0, -7)
@@ -59,12 +60,19 @@ func timeline(w http.ResponseWriter, request *http.Request) {
 	prog := make(chan twitter.Progress, 1)
 
 	var resp *twitter.TwitResponse = nil
+	var method twitter.MediaGetter
+
+	if mode == "search" {
+		method = api.GetSearchMedia
+	} else {
+		method = api.GetHomeMedia
+	}
+
 	go func() {
 		var err error
-		//resp, err = api.GetHomeMedia(ctx, cursor, getAuth(request), prog)
-		resp, err = api.GetSearchMedia(ctx, dateFrom, dateTo, cursor, auth, prog)
+		resp, err = method(ctx, dateFrom, dateTo, cursor, auth, prog)
 		if err != nil {
-			fmt.Errorf("%s", err)
+			log.Printf("%s", err)
 			w.Write(errorMsg)
 		}
 		close(prog)
@@ -84,7 +92,7 @@ func timeline(w http.ResponseWriter, request *http.Request) {
 
 	dat, err := json.Marshal(resp)
 	if err != nil {
-		fmt.Errorf("%s", err)
+		log.Printf("%s", err)
 		w.Write(errorMsg)
 		return
 	}

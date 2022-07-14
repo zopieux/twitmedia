@@ -90,6 +90,8 @@ func cacheKey(e string) string {
 	return e[len(e)-idCachePrefixSize:] + "/" + e
 }
 
+type MediaGetter = func(ctx context.Context, dateFrom, dateTo *time.Time, cursor string, auth TAuth, prog chan<- Progress) (*TwitResponse, error)
+
 func (a *Api) scheduleCache(key, url string, wg *sync.WaitGroup) string {
 	wg.Add(1)
 	a.workQ <- dlItem{
@@ -141,7 +143,7 @@ func (a *Api) extractMedias(author *User, tweet *Tweet, wg *sync.WaitGroup) (out
 	return out
 }
 
-func (a *Api) GetHomeMedia(ctx context.Context, cursor string, auth TAuth, prog chan<- Progress) (*TwitResponse, error) {
+func (a *Api) GetHomeMedia(ctx context.Context, _dateFrom, _dateTo *time.Time, cursor string, auth TAuth, prog chan<- Progress) (*TwitResponse, error) {
 	tl, err := a.getHomeTimeline(ctx, cursor, auth)
 	if err != nil {
 		return nil, err
